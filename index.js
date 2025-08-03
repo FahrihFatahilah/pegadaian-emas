@@ -1,9 +1,10 @@
-const express = require('express');
 const puppeteer = require('puppeteer');
 
-const app = express();
+module.exports = async (req, res) => {
+  if (req.url !== '/harga-emas') {
+    return res.end('Gunakan endpoint /harga-emas untuk mendapatkan data');
+  }
 
-app.get('/harga-emas', async (req, res) => {
   try {
     const browser = await puppeteer.launch({
       headless: true,
@@ -21,7 +22,6 @@ app.get('/harga-emas', async (req, res) => {
 
     await browser.close();
 
-    // Convert to number: 'Rp 18.680,00/ 0,01 gr' → 18680
     const toNumber = (str) => {
       const match = str.match(/Rp\s*([\d.,]+)/);
       if (!match) return null;
@@ -31,23 +31,17 @@ app.get('/harga-emas', async (req, res) => {
     const hargaBeli = toNumber(hargaBeliRaw);
     const hargaJual = toNumber(hargaJualRaw);
 
-    res.json({
+    res.setHeader('Content-Type', 'application/json');
+    res.statusCode = 200;
+    res.end(JSON.stringify({
       hargaBeli,
       hargaJual,
       sumber: 'https://www.pegadaian.co.id/',
       waktu: new Date().toISOString(),
-    });
+    }));
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Gagal mengambil data harga emas dari Pegadaian' });
+    res.statusCode = 500;
+    res.end(JSON.stringify({ error: 'Gagal mengambil data harga emas dari Pegadaian' }));
   }
-});
-
-app.get('/', (req, res) => {
-  res.send('Gunakan endpoint /harga-emas untuk mendapatkan data');
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server berjalan di port ${PORT}`);
-});
+};
