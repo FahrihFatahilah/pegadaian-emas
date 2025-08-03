@@ -1,0 +1,20 @@
+{
+  "name": "emas",
+  "version": "1.0.0",
+  "main": "scape.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "axios": "^1.11.0",
+    "cheerio": "^1.1.2",
+    "colors": "^1.4.0",
+    "express": "^5.1.0",
+    "puppeteer": "^24.15.0",
+    "request": "^2.88.2"
+  }
+}
