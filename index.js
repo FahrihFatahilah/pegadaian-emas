@@ -1,34 +1,27 @@
+const express = require('express');
 const puppeteer = require('puppeteer');
 
-module.exports = async (req, res) => {
-  if (req.url !== '/harga-emas') {
-    return res.end('Gunakan endpoint /harga-emas');
-  }
+const app = express();
 
+app.get('/harga-emas', async (req, res) => {
   try {
     const browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
     const page = await browser.newPage();
+    await page.goto('https://www.pegadaian.co.id/', { waitUntil: 'networkidle2' });
 
-    // Tambahkan user-agent & viewport untuk hindari bot detection
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/115.0.0.0 Safari/537.36');
-    await page.setViewport({ width: 1280, height: 800 });
-
-    await page.goto('https://www.pegadaian.co.id/', { waitUntil: 'networkidle2', timeout: 60000 });
-
-    // Tunggu elemen muncul, kasih timeout
-    await page.waitForSelector('.box-jual-beli__left p', { timeout: 15000 });
-    await page.waitForSelector('.box-jual-beli__right p', { timeout: 15000 });
+    await page.waitForSelector('.box-jual-beli__left p');
+    await page.waitForSelector('.box-jual-beli__right p');
 
     const hargaBeliRaw = await page.$eval('.box-jual-beli__left p', el => el.textContent.trim());
     const hargaJualRaw = await page.$eval('.box-jual-beli__right p', el => el.textContent.trim());
 
     await browser.close();
 
-    // Convert ke angka
+    // Convert to number: 'Rp 18.680,00/ 0,01 gr' → 18680
     const toNumber = (str) => {
       const match = str.match(/Rp\s*([\d.,]+)/);
       if (!match) return null;
@@ -38,19 +31,23 @@ module.exports = async (req, res) => {
     const hargaBeli = toNumber(hargaBeliRaw);
     const hargaJual = toNumber(hargaJualRaw);
 
-    if (!hargaBeli || !hargaJual) throw new Error('Parsing gagal');
-
-    res.setHeader('Content-Type', 'application/json');
-    res.statusCode = 200;
-    res.end(JSON.stringify({
+    res.json({
       hargaBeli,
       hargaJual,
       sumber: 'https://www.pegadaian.co.id/',
-      waktu: new Date().toISOString()
-    }));
-  } catch (err) {
-    console.error('[SCRAPER ERROR]', err.message);
-    res.statusCode = 500;
-    res.end(JSON.stringify({ error: 'Gagal mengambil data harga emas dari Pegadaian' }));
+      waktu: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Gagal mengambil data harga emas dari Pegadaian' });
   }
-};
+});
+
+app.get('/', (req, res) => {
+  res.send('Gunakan endpoint /harga-emas untuk mendapatkan data');
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server berjalan di port ${PORT}`);
+});
